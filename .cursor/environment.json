@@ -1,0 +1,4 @@
+{
+  "name": "Robinhood Trading Bot",
+  "install": "pip install --user -r requirements.txt && { [ -f config.yaml ] || cp config.example.yaml config.yaml; }"
+}
