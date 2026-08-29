@@ -1,6 +1,9 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from robinhood_bot.backtest import Backtester
+from robinhood_bot.client import RobinhoodService
 from robinhood_bot.risk.manager import RiskManager
 from robinhood_bot.config import RiskConfig, TradingConfig
 from robinhood_bot.portfolio.journal import TradeJournal
@@ -67,6 +70,30 @@ def test_risk_manager_stop_loss():
     risk = RiskManager(RiskConfig(stop_loss_pct=8), TradingConfig(), journal)
     assert risk.should_stop_out(pnl_pct=-9.0)
     assert not risk.should_stop_out(pnl_pct=-3.0)
+
+
+def test_account_snapshot_reads_pyhood_average_cost():
+    """pyhood Position exposes average_cost; the snapshot must map it correctly."""
+    position = MagicMock()
+    position.symbol = "AAPL"
+    position.quantity = 3.0
+    position.average_cost = 150.0
+    del position.average_buy_price  # ensure we never read the old attribute name
+
+    quote = MagicMock()
+    quote.price = 170.0
+
+    client = MagicMock()
+    client.get_buying_power.return_value = 1000.0
+    client.get_positions.return_value = [position]
+    client.get_quote.return_value = quote
+
+    service = RobinhoodService()
+    service._client = client
+
+    snapshot = service.account_snapshot(["AAPL"])
+    assert snapshot.positions[0]["average_buy_price"] == 150.0
+    assert round(service.get_position_pnl_pct("AAPL"), 2) == 13.33
 
 
 def test_backtest_runs():

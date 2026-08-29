@@ -161,7 +161,7 @@ class RobinhoodService:
         for position in self.client.get_positions():
             if position.symbol.upper() != symbol.upper():
                 continue
-            avg = float(position.average_buy_price)
+            avg = float(position.average_cost)
             if avg <= 0:
                 return None
             price = self.get_price(symbol)
@@ -180,7 +180,7 @@ class RobinhoodService:
             {
                 "symbol": position.symbol,
                 "quantity": float(position.quantity),
-                "average_buy_price": float(position.average_buy_price),
+                "average_buy_price": float(position.average_cost),
             }
             for position in self.client.get_positions()
         ]
