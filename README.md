@@ -1,180 +1,118 @@
 # Robinhood Trading Bot
 
-A configurable Python bot that connects to your Robinhood account and runs automated trading strategies.
+A production-oriented Python bot that connects to Robinhood, scans stocks/options/crypto for opportunities, manages risk, and executes trades with full audit logging.
 
-> **Disclaimer:** This uses an **unofficial** Robinhood API via [pyhood](https://github.com/jamestford/pyhood). It is not affiliated with Robinhood Markets. Automated trading carries real financial risk — test thoroughly in dry-run mode before enabling live orders.
+> **Disclaimer:** Uses an **unofficial** Robinhood API via [pyhood](https://github.com/jamestford/pyhood). Not affiliated with Robinhood Markets. Automated trading carries real financial risk — test thoroughly in dry-run mode before enabling live orders.
 
-## Features
+## Highlights
 
-- Connect to Robinhood with persistent session (no password in code)
-- **Market scanner** — discovers opportunities across Robinhood popular lists, movers, and your watchlists
-- **Opportunity scoring** — ranks symbols by momentum, volume, valuation, analyst ratings, and strategy signals
-- **Dry-run mode on by default** — logs signals without placing orders
+- **Composite strategy** — votes across RSI, SMA crossover, breakout, MACD, Bollinger Bands, and trend
 - **Multi-market scanning** — stocks, options chains, and crypto pairs
-- **Pluggable strategies** — SMA crossover, RSI, and breakout
-- CLI: `status`, `scan`, `scan-options`, `scan-crypto`, `scan-all`, `once`, `run`
-- Configurable symbols, trade size, and poll interval
+- **Risk management** — stop-loss, take-profit, daily loss limits, market-hours guard, position sizing (fixed / % portfolio / ATR volatility)
+- **Execution engine** — unified stock + crypto execution with pre-trade checks
+- **Trade journal** — append-only log of every action (`data/trades.jsonl`)
+- **Backtesting** — quick historical strategy evaluation
+- **Dry-run by default** — no real orders unless explicitly enabled
 
 ## Quick start
 
-### 1. Install dependencies
-
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 2. Authenticate with Robinhood
-
-```bash
 pyhood setup login
-```
-
-Approve the device prompt in the Robinhood mobile app. Your session is saved to `~/.pyhood/session.json` and refreshes automatically.
-
-### 3. Configure the bot
-
-```bash
 cp config.example.yaml config.yaml
-```
-
-Edit `config.yaml` — start with defaults (`dry_run: true`, `live_trading_enabled: false`).
-
-### 4. Check connection
-
-```bash
 python run_bot.py status
+python run_bot.py scan-all
+python run_bot.py backtest AAPL MSFT NVDA
+python run_bot.py once      # dry-run cycle
 ```
 
-### 5. Scan for opportunities
+For crypto: `pyhood setup crypto`
 
-```bash
-python run_bot.py scan           # stocks
-python run_bot.py scan-options   # option chains on active underlyings
-python run_bot.py scan-crypto    # crypto pairs (requires pyhood setup crypto)
-python run_bot.py scan-all       # all three markets
-```
+## Commands
 
-### 6. Run a test cycle (no real trades)
-
-```bash
-python run_bot.py once
-```
-
-### 7. Run continuously (still dry-run unless you opt in)
-
-```bash
-python run_bot.py run
-```
-
-## Enabling live trading
-
-Only after you have tested dry-run behavior:
-
-1. Set `dry_run: false` in `config.yaml`
-2. Set `live_trading_enabled: true` in `config.yaml`
-
-The bot will refuse to place real orders unless **both** flags are set correctly.
-
-## Configuration
-
-| Setting | Description |
+| Command | Description |
 | --- | --- |
-| `bot.poll_interval_seconds` | Seconds between strategy evaluations |
-| `bot.dry_run` | Log trades without executing |
-| `bot.live_trading_enabled` | Safety gate for real orders |
-| `trading.symbols` | Tickers to watch |
-| `trading.trade_amount_usd` | Dollar amount per buy signal |
-| `trading.max_positions` | Max simultaneous positions |
-| `scanner.enabled` | Turn market scanning on/off |
-| `scanner.symbol_source` | `scanner` (auto-discover) or `static` (manual list) |
-| `scanner.discovery_tags` | Robinhood lists to scan (`100-most-popular`, `top-movers`, etc.) |
-| `scanner.include_movers` | Include S&P 500 top movers |
-| `scanner.include_watchlists` | Include your Robinhood watchlists |
-| `scanner.min_score` | Minimum opportunity score (0–1) |
-| `scanner.top_opportunities` | How many ranked setups to surface per scan |
-| `strategy.name` | `sma_crossover`, `rsi`, or `breakout` |
-| `options_scanner.*` | Option chain liquidity, delta, and OI filters |
-| `crypto_scanner.*` | Crypto pair limits and momentum thresholds |
+| `status` | Account, positions, P&L, risk settings, recent trades |
+| `journal` | Full trade log |
+| `scan` | Stock opportunities |
+| `scan-options` | Option chain opportunities |
+| `scan-crypto` | Crypto pair opportunities |
+| `scan-all` | All markets |
+| `backtest SYMBOL...` | Historical strategy test |
+| `once` | Single trading cycle |
+| `run` | Continuous loop |
 
-Environment overrides: `BOT_DRY_RUN`, `BOT_LIVE_TRADING_ENABLED`
-
-For crypto scanning/trading, also run:
-
-```bash
-pyhood setup crypto
-```
-
-## How scanning works
-
-1. **Discover** — Collect symbols from Robinhood tags, movers, and watchlists
-2. **Screen** — Batch-fetch quotes and fundamentals; filter by price, volume, and market cap
-3. **Score** — Rank by momentum, relative volume, 52-week range position, valuation, analyst ratings, and your strategy
-4. **Trade** — In `scanner` mode, the bot acts on the top buy/sell candidates (respecting `max_positions`)
-
-The scanner does not brute-force all ~5,000 Robinhood stocks each cycle (that would be slow and rate-limited). It focuses on what Robinhood surfaces as popular and moving, then deep-evaluates the best candidates.
-
-## Strategies
-
-### `sma_crossover`
-
-Buys when the fast SMA crosses above the slow SMA; sells on a cross below.
-
-### `rsi`
-
-Buys when RSI is oversold; sells when overbought.
-
-```yaml
-strategy:
-  name: rsi
-  params:
-    period: 14
-    oversold: 30
-    overbought: 70
-```
-
-### `breakout`
-
-Buys on breakout above the recent range high; sells on breakdown below the range low.
-
-```yaml
-strategy:
-  name: breakout
-  params:
-    lookback_period: 20
-    min_bars: 25
-```
-
-Add your own by implementing `Strategy` in `robinhood_bot/strategies/` and registering it in `robinhood_bot/strategies/__init__.py`.
-
-## Project layout
+## Architecture
 
 ```
 robinhood_bot/
-  bot.py              # CLI and main loop
-  client.py           # Robinhood connection wrapper
-  config.py           # YAML + env config loader
-  scanner/
-    market_scanner.py  # Stock discovery and scoring
-    options_scanner.py # Option chain scanner
-    crypto_scanner.py  # Crypto pair scanner
+  bot.py                 # CLI + orchestration
+  client.py              # Robinhood / crypto API wrapper
+  config.py              # YAML configuration
+  execution/engine.py    # Trade execution + journaling
+  risk/
+    manager.py           # Pre-trade risk checks, stop-loss rules
+    position_sizer.py    # Fixed / % / ATR-based sizing
+  portfolio/journal.py   # Trade audit log
+  scanner/               # Stock, options, crypto scanners
   strategies/
-    base.py
-    sma_crossover.py
-    rsi.py
-    breakout.py
-config.example.yaml
-run_bot.py
-requirements.txt
+    composite.py         # Recommended multi-signal strategy
+    rsi.py, breakout.py, sma_crossover.py
+    indicators.py        # RSI, SMA, EMA, MACD, ATR, Bollinger
+  backtest/runner.py     # Simple walk-forward backtest
+```
+
+## Recommended configuration
+
+The example config uses:
+- `strategy.name: composite` — best out-of-the-box signal quality
+- `scanner.symbol_source: scanner` — auto-discover across Robinhood
+- `trading.sizing_mode: volatility` — ATR-based position sizing
+- `risk.stop_loss_pct: 8` / `take_profit_pct: 15` — automatic exits
+- `bot.dry_run: true` — safe default
+
+## Enabling live trading
+
+Only after backtesting and dry-run validation:
+
+1. `dry_run: false`
+2. `live_trading_enabled: true`
+
+Both are required. The bot will not place real orders otherwise.
+
+## Risk controls
+
+| Setting | Purpose |
+| --- | --- |
+| `risk.max_daily_loss_usd` | Halt trading after daily realized loss |
+| `risk.stop_loss_pct` | Auto-sell losing positions |
+| `risk.take_profit_pct` | Auto-sell winning positions |
+| `risk.min_opportunity_score` | Minimum scanner score to trade |
+| `risk.trade_only_during_market_hours` | Block stock trades when market closed |
+| `trading.max_positions` | Cap simultaneous holdings |
+| `trading.sizing_mode` | `fixed`, `percent_portfolio`, or `volatility` |
+
+## Strategies
+
+| Name | Description |
+| --- | --- |
+| `composite` | **Recommended.** Weighted vote across all signals |
+| `rsi` | Oversold/overbought |
+| `breakout` | Range breakout/breakdown |
+| `sma_crossover` | Moving average crossover |
+
+## Testing
+
+```bash
+pytest tests/ -q
 ```
 
 ## Important notes
 
-- Robinhood may rate-limit or block repeated failed logins — use `pyhood setup login`, not hardcoded passwords.
-- Pattern day trading rules and margin requirements still apply.
-- Past strategy performance does not guarantee future results.
-- For crypto, pyhood supports Robinhood's official Crypto API separately (`pyhood setup crypto`).
+- Robinhood may rate-limit logins — use `pyhood setup login`, never hardcode passwords
+- Pattern day trading rules and margin requirements still apply
+- Scanner focuses on Robinhood discovery surfaces (popular, movers, watchlists), not all ~5,000 tickers
+- Past performance does not guarantee future results
 
 ## License
 

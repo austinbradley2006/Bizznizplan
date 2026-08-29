@@ -135,6 +135,39 @@ class RobinhoodService:
         bars = self.client.get_stock_historicals(symbol, interval=interval, span=span)
         return [float(bar.close_price) for bar in bars]
 
+    def get_ohlc(
+        self,
+        symbol: str,
+        *,
+        span: str = "month",
+        interval: str = "day",
+    ) -> dict[str, list[float]]:
+        if self.is_crypto_symbol(symbol):
+            return {"highs": [], "lows": [], "closes": self.get_closes(symbol, span=span, interval=interval)}
+        bars = self.client.get_stock_historicals(symbol, interval=interval, span=span)
+        return {
+            "highs": [float(bar.high_price) for bar in bars],
+            "lows": [float(bar.low_price) for bar in bars],
+            "closes": [float(bar.close_price) for bar in bars],
+        }
+
+    def is_market_open(self) -> bool:
+        try:
+            return bool(self.client.is_market_open())
+        except Exception:
+            return True
+
+    def get_position_pnl_pct(self, symbol: str) -> float | None:
+        for position in self.client.get_positions():
+            if position.symbol.upper() != symbol.upper():
+                continue
+            avg = float(position.average_buy_price)
+            if avg <= 0:
+                return None
+            price = self.get_price(symbol)
+            return ((price - avg) / avg) * 100
+        return None
+
     def get_position_quantity(self, symbol: str) -> float:
         for position in self.client.get_positions():
             if position.symbol.upper() == symbol.upper():
@@ -190,4 +223,61 @@ class RobinhoodService:
 
         order = self.client.sell_stock(symbol.upper(), quantity)
         logger.info("Placed sell order for %s: %s", symbol, order)
+        return {"dry_run": False, "order": order, **action}
+
+    def buy_crypto_market(self, symbol: str, amount_usd: float, *, dry_run: bool) -> dict:
+        if not self.crypto_available() or self._crypto_client is None:
+            raise RuntimeError("Crypto API not configured")
+
+        quote = self.get_crypto_quote(symbol)
+        price = (quote.bid + quote.ask) / 2 if quote else 0.0
+        quantity = round(amount_usd / price, 8) if price > 0 else 0.0
+        action = {
+            "side": "buy",
+            "symbol": symbol.upper(),
+            "quantity": quantity,
+            "estimated_price": price,
+            "estimated_notional": round(quantity * price, 2),
+            "order_type": "market",
+            "asset_type": "crypto",
+        }
+        if dry_run:
+            logger.info("DRY RUN crypto buy: %s", action)
+            return {"dry_run": True, **action}
+
+        account = self._crypto_client.get_account()
+        order = self._crypto_client.place_order(
+            account_number=account.account_number,
+            side="buy",
+            order_type="market",
+            symbol=symbol.upper(),
+            order_config={"asset_quantity": str(quantity)},
+        )
+        logger.info("Placed crypto buy for %s: %s", symbol, order)
+        return {"dry_run": False, "order": order, **action}
+
+    def sell_crypto_market(self, symbol: str, quantity: float, *, dry_run: bool) -> dict:
+        if not self.crypto_available() or self._crypto_client is None:
+            raise RuntimeError("Crypto API not configured")
+
+        action = {
+            "side": "sell",
+            "symbol": symbol.upper(),
+            "quantity": quantity,
+            "order_type": "market",
+            "asset_type": "crypto",
+        }
+        if dry_run:
+            logger.info("DRY RUN crypto sell: %s", action)
+            return {"dry_run": True, **action}
+
+        account = self._crypto_client.get_account()
+        order = self._crypto_client.place_order(
+            account_number=account.account_number,
+            side="sell",
+            order_type="market",
+            symbol=symbol.upper(),
+            order_config={"asset_quantity": str(quantity)},
+        )
+        logger.info("Placed crypto sell for %s: %s", symbol, order)
         return {"dry_run": False, "order": order, **action}

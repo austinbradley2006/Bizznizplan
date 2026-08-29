@@ -44,6 +44,7 @@ class BreakoutStrategy(Strategy):
                     f"Price ${price:.2f} broke above {self.lookback_period}-bar high "
                     f"${range_high:.2f}"
                 ),
+                confidence=0.7,
             )
 
         if price < range_low:
@@ -53,6 +54,7 @@ class BreakoutStrategy(Strategy):
                     f"Price ${price:.2f} broke below {self.lookback_period}-bar low "
                     f"${range_low:.2f}"
                 ),
+                confidence=0.7,
             )
 
         return StrategyDecision(

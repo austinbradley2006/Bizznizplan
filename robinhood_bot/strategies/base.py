@@ -16,6 +16,7 @@ class Signal(str, Enum):
 class StrategyDecision:
     signal: Signal
     reason: str
+    confidence: float = 0.5
 
 
 class Strategy:

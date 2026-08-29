@@ -6,17 +6,29 @@ bot:
   live_trading_enabled: false
 
 trading:
-  # Used when scanner.symbol_source is "static"
   symbols:
     - AAPL
     - MSFT
   trade_amount_usd: 50
   max_positions: 5
+  # fixed | percent_portfolio | volatility
+  sizing_mode: volatility
+  portfolio_pct_per_trade: 0.05
+  max_position_pct_of_buying_power: 0.15
+  risk_pct_per_trade: 0.01
+  atr_period: 14
+  atr_multiplier: 2.0
+
+risk:
+  max_daily_loss_usd: 250
+  stop_loss_pct: 8
+  take_profit_pct: 15
+  min_opportunity_score: 0.5
+  trade_only_during_market_hours: true
+  journal_path: data/trades.jsonl
 
 scanner:
   enabled: true
-  # scanner = discover opportunities across Robinhood lists/movers/watchlists
-  # static = only trade the symbols listed above
   symbol_source: scanner
   discovery_tags:
     - 100-most-popular
@@ -39,17 +51,15 @@ scanner:
     analyst: 0.2
 
 strategy:
-  # Available: sma_crossover, rsi, breakout
-  name: rsi
+  # Recommended: composite (combines RSI, SMA, breakout, MACD, Bollinger, trend)
+  name: composite
   params:
-    period: 14
-    oversold: 30
-    overbought: 70
-    min_bars: 20
+    min_bars: 35
+    buy_threshold: 0.55
+    sell_threshold: -0.55
 
 options_scanner:
   enabled: true
-  # Leave empty to scan underlyings from the stock scanner
   underlying_symbols: []
   max_underlyings: 15
   min_option_volume: 100
@@ -61,7 +71,6 @@ options_scanner:
 
 crypto_scanner:
   enabled: true
-  # Leave empty to scan all API-tradable USD pairs
   pairs: []
   max_pairs: 20
   min_bars: 20

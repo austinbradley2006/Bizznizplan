@@ -45,12 +45,14 @@ class SMACrossoverStrategy(Strategy):
             return StrategyDecision(
                 signal=Signal.BUY,
                 reason=f"Fast SMA ({fast_now:.2f}) crossed above slow SMA ({slow_now:.2f})",
+                confidence=0.75,
             )
 
         if fast_prev >= slow_prev and fast_now < slow_now:
             return StrategyDecision(
                 signal=Signal.SELL,
                 reason=f"Fast SMA ({fast_now:.2f}) crossed below slow SMA ({slow_now:.2f})",
+                confidence=0.75,
             )
 
         return StrategyDecision(

@@ -27,11 +27,27 @@ class TradingConfig:
     symbols: list[str] = field(default_factory=lambda: ["AAPL"])
     trade_amount_usd: float = 50.0
     max_positions: int = 5
+    sizing_mode: str = "fixed"  # fixed | percent_portfolio | volatility
+    portfolio_pct_per_trade: float = 0.05
+    max_position_pct_of_buying_power: float = 0.15
+    risk_pct_per_trade: float = 0.01
+    atr_period: int = 14
+    atr_multiplier: float = 2.0
+
+
+@dataclass
+class RiskConfig:
+    max_daily_loss_usd: float = 250.0
+    stop_loss_pct: float = 8.0
+    take_profit_pct: float = 15.0
+    min_opportunity_score: float = 0.5
+    trade_only_during_market_hours: bool = True
+    journal_path: str = "data/trades.jsonl"
 
 
 @dataclass
 class StrategyConfig:
-    name: str = "sma_crossover"
+    name: str = "composite"
     params: dict = field(default_factory=dict)
 
 
@@ -101,6 +117,7 @@ class CryptoScannerConfig:
 class AppConfig:
     bot: BotConfig = field(default_factory=BotConfig)
     trading: TradingConfig = field(default_factory=TradingConfig)
+    risk: RiskConfig = field(default_factory=RiskConfig)
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
     scanner: ScannerConfig = field(default_factory=ScannerConfig)
     options_scanner: OptionsScannerConfig = field(default_factory=OptionsScannerConfig)
@@ -122,6 +139,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
 
     bot_data = data.get("bot", {})
     trading_data = data.get("trading", {})
+    risk_data = data.get("risk", {})
     strategy_data = data.get("strategy", {})
     scanner_data = data.get("scanner", {})
     options_data = data.get("options_scanner", {})
@@ -140,9 +158,27 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         symbols=[str(s).upper() for s in trading_data.get("symbols", ["AAPL"])],
         trade_amount_usd=float(trading_data.get("trade_amount_usd", 50)),
         max_positions=int(trading_data.get("max_positions", 5)),
+        sizing_mode=str(trading_data.get("sizing_mode", "fixed")),
+        portfolio_pct_per_trade=float(trading_data.get("portfolio_pct_per_trade", 0.05)),
+        max_position_pct_of_buying_power=float(
+            trading_data.get("max_position_pct_of_buying_power", 0.15)
+        ),
+        risk_pct_per_trade=float(trading_data.get("risk_pct_per_trade", 0.01)),
+        atr_period=int(trading_data.get("atr_period", 14)),
+        atr_multiplier=float(trading_data.get("atr_multiplier", 2.0)),
+    )
+    risk = RiskConfig(
+        max_daily_loss_usd=float(risk_data.get("max_daily_loss_usd", 250)),
+        stop_loss_pct=float(risk_data.get("stop_loss_pct", 8)),
+        take_profit_pct=float(risk_data.get("take_profit_pct", 15)),
+        min_opportunity_score=float(risk_data.get("min_opportunity_score", 0.5)),
+        trade_only_during_market_hours=bool(
+            risk_data.get("trade_only_during_market_hours", True)
+        ),
+        journal_path=str(risk_data.get("journal_path", "data/trades.jsonl")),
     )
     strategy = StrategyConfig(
-        name=str(strategy_data.get("name", "sma_crossover")),
+        name=str(strategy_data.get("name", "composite")),
         params=dict(strategy_data.get("params", {})),
     )
     scanner = ScannerConfig(
@@ -202,6 +238,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
     return AppConfig(
         bot=bot,
         trading=trading,
+        risk=risk,
         strategy=strategy,
         scanner=scanner,
         options_scanner=options_scanner,

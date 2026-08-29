@@ -38,12 +38,14 @@ class RSIStrategy(Strategy):
             return StrategyDecision(
                 signal=Signal.BUY,
                 reason=f"RSI oversold at {current_rsi:.1f} (threshold {self.oversold})",
+                confidence=min((self.oversold - current_rsi) / self.oversold + 0.5, 1.0),
             )
 
         if current_rsi >= self.overbought:
             return StrategyDecision(
                 signal=Signal.SELL,
                 reason=f"RSI overbought at {current_rsi:.1f} (threshold {self.overbought})",
+                confidence=min((current_rsi - self.overbought) / (100 - self.overbought) + 0.5, 1.0),
             )
 
         return StrategyDecision(
