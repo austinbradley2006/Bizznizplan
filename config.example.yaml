@@ -1,0 +1,95 @@
+# Copy to config.yaml and edit before running the bot.
+
+bot:
+  poll_interval_seconds: 300
+  dry_run: true
+  live_trading_enabled: false
+
+trading:
+  symbols:
+    - AAPL
+    - MSFT
+  trade_amount_usd: 50
+  max_positions: 5
+  # fixed | percent_portfolio | volatility
+  sizing_mode: volatility
+  portfolio_pct_per_trade: 0.05
+  max_position_pct_of_buying_power: 0.15
+  risk_pct_per_trade: 0.01
+  atr_period: 14
+  atr_multiplier: 2.0
+
+risk:
+  max_daily_loss_usd: 250
+  stop_loss_pct: 8
+  take_profit_pct: 15
+  min_opportunity_score: 0.5
+  trade_only_during_market_hours: true
+  journal_path: data/trades.jsonl
+
+scanner:
+  enabled: true
+  symbol_source: scanner
+  discovery_tags:
+    - 100-most-popular
+    - 10-most-popular
+    - top-movers
+  include_movers: true
+  include_watchlists: true
+  min_price_usd: 5
+  min_avg_volume: 100000
+  min_market_cap_usd: 500000000
+  max_candidates: 300
+  deep_scan_limit: 60
+  top_opportunities: 10
+  min_score: 0.55
+  weights:
+    momentum: 0.25
+    volume: 0.2
+    range_position: 0.15
+    value: 0.1
+    analyst: 0.2
+
+strategy:
+  # Recommended: composite (combines RSI, SMA, breakout, MACD, Bollinger, trend)
+  name: composite
+  params:
+    min_bars: 35
+    buy_threshold: 0.55
+    sell_threshold: -0.55
+
+options_scanner:
+  enabled: true
+  underlying_symbols: []
+  max_underlyings: 15
+  min_option_volume: 100
+  min_open_interest: 500
+  target_delta_min: 0.25
+  target_delta_max: 0.55
+  min_score: 0.45
+  top_opportunities: 10
+
+crypto_scanner:
+  enabled: true
+  pairs: []
+  max_pairs: 20
+  min_bars: 20
+  interval: hour
+  span: week
+  min_score: 0.5
+  top_opportunities: 10
+
+messaging:
+  telegram:
+    enabled: true
+    # Or set TELEGRAM_BOT_TOKEN in .env (recommended)
+    bot_token: ""
+    # Leave empty to allow any chat on first /start (it shows your chat ID)
+    allowed_chat_ids: []
+  twilio:
+    enabled: false
+    # Or set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env
+    phone_number: "+1..."
+    allowed_numbers:
+      - "+1..."
+    webhook_port: 8080
