@@ -39,8 +39,33 @@ scanner:
     analyst: 0.2
 
 strategy:
-  name: sma_crossover
+  # Available: sma_crossover, rsi, breakout
+  name: rsi
   params:
-    fast_period: 10
-    slow_period: 30
-    min_bars: 35
+    period: 14
+    oversold: 30
+    overbought: 70
+    min_bars: 20
+
+options_scanner:
+  enabled: true
+  # Leave empty to scan underlyings from the stock scanner
+  underlying_symbols: []
+  max_underlyings: 15
+  min_option_volume: 100
+  min_open_interest: 500
+  target_delta_min: 0.25
+  target_delta_max: 0.55
+  min_score: 0.45
+  top_opportunities: 10
+
+crypto_scanner:
+  enabled: true
+  # Leave empty to scan all API-tradable USD pairs
+  pairs: []
+  max_pairs: 20
+  min_bars: 20
+  interval: hour
+  span: week
+  min_score: 0.5
+  top_opportunities: 10

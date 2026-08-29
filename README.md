@@ -10,8 +10,9 @@ A configurable Python bot that connects to your Robinhood account and runs autom
 - **Market scanner** — discovers opportunities across Robinhood popular lists, movers, and your watchlists
 - **Opportunity scoring** — ranks symbols by momentum, volume, valuation, analyst ratings, and strategy signals
 - **Dry-run mode on by default** — logs signals without placing orders
-- Pluggable strategies (includes SMA crossover example)
-- CLI: `status`, `scan`, `once`, `run`
+- **Multi-market scanning** — stocks, options chains, and crypto pairs
+- **Pluggable strategies** — SMA crossover, RSI, and breakout
+- CLI: `status`, `scan`, `scan-options`, `scan-crypto`, `scan-all`, `once`, `run`
 - Configurable symbols, trade size, and poll interval
 
 ## Quick start
@@ -46,13 +47,14 @@ Edit `config.yaml` — start with defaults (`dry_run: true`, `live_trading_enabl
 python run_bot.py status
 ```
 
-### 5. Scan the market for opportunities
+### 5. Scan for opportunities
 
 ```bash
-python run_bot.py scan
+python run_bot.py scan           # stocks
+python run_bot.py scan-options   # option chains on active underlyings
+python run_bot.py scan-crypto    # crypto pairs (requires pyhood setup crypto)
+python run_bot.py scan-all       # all three markets
 ```
-
-This pulls candidates from Robinhood discovery surfaces (popular lists, top movers, S&P movers, your watchlists), screens them, and ranks the best trade setups.
 
 ### 6. Run a test cycle (no real trades)
 
@@ -92,10 +94,17 @@ The bot will refuse to place real orders unless **both** flags are set correctly
 | `scanner.include_watchlists` | Include your Robinhood watchlists |
 | `scanner.min_score` | Minimum opportunity score (0–1) |
 | `scanner.top_opportunities` | How many ranked setups to surface per scan |
-| `strategy.name` | Strategy to use (`sma_crossover`) |
-| `strategy.params` | Strategy-specific parameters |
+| `strategy.name` | `sma_crossover`, `rsi`, or `breakout` |
+| `options_scanner.*` | Option chain liquidity, delta, and OI filters |
+| `crypto_scanner.*` | Crypto pair limits and momentum thresholds |
 
 Environment overrides: `BOT_DRY_RUN`, `BOT_LIVE_TRADING_ENABLED`
+
+For crypto scanning/trading, also run:
+
+```bash
+pyhood setup crypto
+```
 
 ## How scanning works
 
@@ -108,17 +117,33 @@ The scanner does not brute-force all ~5,000 Robinhood stocks each cycle (that wo
 
 ## Strategies
 
-### `sma_crossover` (default)
+### `sma_crossover`
 
-Buys when the fast simple moving average crosses above the slow SMA; sells on a cross below.
+Buys when the fast SMA crosses above the slow SMA; sells on a cross below.
+
+### `rsi`
+
+Buys when RSI is oversold; sells when overbought.
 
 ```yaml
 strategy:
-  name: sma_crossover
+  name: rsi
   params:
-    fast_period: 10
-    slow_period: 30
-    min_bars: 35
+    period: 14
+    oversold: 30
+    overbought: 70
+```
+
+### `breakout`
+
+Buys on breakout above the recent range high; sells on breakdown below the range low.
+
+```yaml
+strategy:
+  name: breakout
+  params:
+    lookback_period: 20
+    min_bars: 25
 ```
 
 Add your own by implementing `Strategy` in `robinhood_bot/strategies/` and registering it in `robinhood_bot/strategies/__init__.py`.
@@ -131,10 +156,14 @@ robinhood_bot/
   client.py           # Robinhood connection wrapper
   config.py           # YAML + env config loader
   scanner/
-    market_scanner.py # Cross-app opportunity discovery and scoring
+    market_scanner.py  # Stock discovery and scoring
+    options_scanner.py # Option chain scanner
+    crypto_scanner.py  # Crypto pair scanner
   strategies/
-    base.py           # Strategy interface
-    sma_crossover.py  # Example strategy
+    base.py
+    sma_crossover.py
+    rsi.py
+    breakout.py
 config.example.yaml
 run_bot.py
 requirements.txt

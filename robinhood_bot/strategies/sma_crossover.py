@@ -2,13 +2,7 @@ from __future__ import annotations
 
 from robinhood_bot.client import RobinhoodService
 from robinhood_bot.strategies.base import Signal, Strategy, StrategyDecision
-
-
-def _sma(values: list[float], period: int) -> float | None:
-    if len(values) < period:
-        return None
-    window = values[-period:]
-    return sum(window) / period
+from robinhood_bot.strategies.indicators import sma as _sma
 
 
 class SMACrossoverStrategy(Strategy):

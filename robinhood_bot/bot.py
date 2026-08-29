@@ -8,9 +8,15 @@ from datetime import datetime, timezone
 
 from robinhood_bot.client import RobinhoodService
 from robinhood_bot.config import AppConfig, load_config
-from robinhood_bot.scanner import MarketScanner, ScanResult, TradeOpportunity
+from robinhood_bot.scanner import (
+    CryptoScanner,
+    MarketScanner,
+    OptionsScanner,
+    ScanResult,
+    TradeOpportunity,
+)
 from robinhood_bot.strategies import build_strategy
-from robinhood_bot.strategies.base import Signal, Strategy
+from robinhood_bot.strategies.base import Signal
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,15 +29,23 @@ def _format_opportunity(opportunity: TradeOpportunity) -> str:
     sources = ", ".join(opportunity.sources[:3])
     if len(opportunity.sources) > 3:
         sources += ", ..."
+    label = opportunity.display_symbol
+    if opportunity.asset_type != "stock":
+        label = f"[{opportunity.asset_type}] {label}"
+    change = (
+        f"chg={opportunity.change_pct:+.2f}%"
+        if opportunity.asset_type != "option"
+        else f"mark=${opportunity.price:,.2f}"
+    )
     return (
-        f"{opportunity.symbol:6} score={opportunity.score:.2f} "
-        f"signal={opportunity.signal:4} price=${opportunity.price:,.2f} "
-        f"chg={opportunity.change_pct:+.2f}% | {opportunity.reason} "
+        f"{label:24} score={opportunity.score:.2f} "
+        f"signal={opportunity.signal:4} {change} | {opportunity.reason} "
         f"[{sources}]"
     )
 
 
 def print_scan_results(result: ScanResult) -> None:
+    print(f"Market: {result.market}")
     print(f"Scanned universe: {result.scanned_symbols} symbols")
     print(f"Deep evaluated: {result.evaluated_symbols} symbols")
     print(f"Top opportunities: {len(result.opportunities)}\n")
@@ -60,9 +74,25 @@ class TradingBot:
         self.service = service
         self.strategy = build_strategy(config.strategy.name, config.strategy.params)
         self.scanner = MarketScanner(service, config.scanner)
+        self.options_scanner = OptionsScanner(service, self.scanner, config.options_scanner)
+        self.crypto_scanner = CryptoScanner(service, config.crypto_scanner)
 
     def scan_market(self) -> ScanResult:
         return self.scanner.scan(strategy=self.strategy)
+
+    def scan_options(self) -> ScanResult:
+        return self.options_scanner.scan(strategy=self.strategy)
+
+    def scan_crypto(self) -> ScanResult:
+        return self.crypto_scanner.scan(strategy=self.strategy)
+
+    def scan_all(self) -> list[ScanResult]:
+        results = [self.scan_market()]
+        if self.config.options_scanner.enabled:
+            results.append(self.scan_options())
+        if self.config.crypto_scanner.enabled:
+            results.append(self.scan_crypto())
+        return results
 
     def _open_position_symbols(self) -> set[str]:
         positions = self.service.account_snapshot([]).positions
@@ -220,8 +250,9 @@ def cmd_status(config: AppConfig, service: RobinhoodService) -> int:
     print(f"Dry run: {config.bot.dry_run}")
     print(f"Live trading enabled: {config.bot.live_trading_enabled}")
     print(f"Strategy: {config.strategy.name}")
-    print(f"Scanner enabled: {config.scanner.enabled}")
-    print(f"Symbol source: {config.scanner.symbol_source}")
+    print(f"Stock scanner: {config.scanner.enabled} ({config.scanner.symbol_source})")
+    print(f"Options scanner: {config.options_scanner.enabled}")
+    print(f"Crypto scanner: {config.crypto_scanner.enabled} (available: {service.crypto_available()})")
     print("\nPositions:")
     if not snapshot.positions:
         print("  (none)")
@@ -233,9 +264,26 @@ def cmd_status(config: AppConfig, service: RobinhoodService) -> int:
     return 0
 
 
-def cmd_scan(config: AppConfig, bot: TradingBot) -> int:
-    result = bot.scan_market()
-    print_scan_results(result)
+def cmd_scan(bot: TradingBot) -> int:
+    print_scan_results(bot.scan_market())
+    return 0
+
+
+def cmd_scan_options(bot: TradingBot) -> int:
+    print_scan_results(bot.scan_options())
+    return 0
+
+
+def cmd_scan_crypto(bot: TradingBot) -> int:
+    print_scan_results(bot.scan_crypto())
+    return 0
+
+
+def cmd_scan_all(bot: TradingBot) -> int:
+    for index, result in enumerate(bot.scan_all()):
+        if index > 0:
+            print("\n" + "=" * 72 + "\n")
+        print_scan_results(result)
     return 0
 
 
@@ -249,7 +297,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("status", help="Show account snapshot and bot settings")
-    subparsers.add_parser("scan", help="Scan Robinhood for ranked trade opportunities")
+    subparsers.add_parser("scan", help="Scan stocks for ranked opportunities")
+    subparsers.add_parser("scan-options", help="Scan option chains on active underlyings")
+    subparsers.add_parser("scan-crypto", help="Scan Robinhood crypto pairs")
+    subparsers.add_parser("scan-all", help="Scan stocks, options, and crypto")
     subparsers.add_parser("once", help="Run one evaluation cycle")
     subparsers.add_parser("run", help="Run the bot loop continuously")
     return parser
@@ -272,7 +323,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         return cmd_status(config, service)
     if args.command == "scan":
-        return cmd_scan(config, bot)
+        return cmd_scan(bot)
+    if args.command == "scan-options":
+        return cmd_scan_options(bot)
+    if args.command == "scan-crypto":
+        return cmd_scan_crypto(bot)
+    if args.command == "scan-all":
+        return cmd_scan_all(bot)
     if args.command == "once":
         bot.run_once()
         return 0

@@ -1,8 +1,12 @@
 from robinhood_bot.strategies.base import Strategy
+from robinhood_bot.strategies.breakout import BreakoutStrategy
+from robinhood_bot.strategies.rsi import RSIStrategy
 from robinhood_bot.strategies.sma_crossover import SMACrossoverStrategy
 
 STRATEGIES: dict[str, type[Strategy]] = {
     "sma_crossover": SMACrossoverStrategy,
+    "rsi": RSIStrategy,
+    "breakout": BreakoutStrategy,
 }
 
 

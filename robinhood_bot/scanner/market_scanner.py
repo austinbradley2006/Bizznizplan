@@ -1,40 +1,13 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 
 from robinhood_bot.client import RobinhoodService
 from robinhood_bot.config import ScannerConfig
+from robinhood_bot.scanner.models import ScanResult, TradeOpportunity
 from robinhood_bot.strategies.base import Signal, Strategy
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_DISCOVERY_TAGS = (
-    "100-most-popular",
-    "10-most-popular",
-    "top-movers",
-)
-
-
-@dataclass
-class TradeOpportunity:
-    symbol: str
-    score: float
-    signal: str
-    reason: str
-    price: float
-    change_pct: float
-    sources: list[str] = field(default_factory=list)
-    metrics: dict[str, float] = field(default_factory=dict)
-
-
-@dataclass
-class ScanResult:
-    scanned_symbols: int
-    evaluated_symbols: int
-    opportunities: list[TradeOpportunity]
-    buy_candidates: list[TradeOpportunity]
-    sell_candidates: list[TradeOpportunity]
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -275,6 +248,7 @@ class MarketScanner:
             ][: self.config.top_opportunities]
 
         return ScanResult(
+            market="stocks",
             scanned_symbols=len(candidate_map),
             evaluated_symbols=len(deep_candidates),
             opportunities=opportunities[: self.config.top_opportunities],

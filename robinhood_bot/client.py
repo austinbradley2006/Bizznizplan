@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import pyhood
 from pyhood.client import PyhoodClient
+from pyhood.crypto import CryptoClient
 from pyhood.exceptions import AuthError, DeviceApprovalRequiredError, TokenExpiredError
 from pyhood.models import Mover, Watchlist
 
@@ -23,6 +24,8 @@ class RobinhoodService:
 
     def __init__(self) -> None:
         self._client: PyhoodClient | None = None
+        self._crypto_client: CryptoClient | None = None
+        self._crypto_checked = False
 
     def connect(self) -> None:
         try:
@@ -68,7 +71,67 @@ class RobinhoodService:
     def get_ratings(self, symbol: str):
         return self.client.get_ratings(symbol)
 
-    def get_closes(self, symbol: str, *, span: str = "month", interval: str = "day") -> list[float]:
+    @staticmethod
+    def is_crypto_symbol(symbol: str) -> bool:
+        return "-" in symbol.upper()
+
+    def crypto_available(self) -> bool:
+        if self._crypto_checked:
+            return self._crypto_client is not None
+        self._crypto_checked = True
+        try:
+            self._crypto_client = CryptoClient()
+            self._crypto_client.get_account()
+            return True
+        except Exception:
+            self._crypto_client = None
+            return False
+
+    def get_crypto_tradable_pairs(self) -> list[str]:
+        if not self.crypto_available() or self._crypto_client is None:
+            return []
+        pairs = self._crypto_client.get_trading_pairs()
+        return [
+            pair.symbol
+            for pair in pairs
+            if pair.api_tradable and pair.quote_currency == "USD"
+        ]
+
+    def get_crypto_quote(self, symbol: str):
+        if not self.crypto_available() or self._crypto_client is None:
+            raise RuntimeError("Crypto API not configured")
+        quotes = self._crypto_client.get_best_bid_ask(symbol.upper())
+        return quotes[0] if quotes else None
+
+    def get_crypto_closes(
+        self,
+        symbol: str,
+        *,
+        span: str = "week",
+        interval: str = "hour",
+    ) -> list[float]:
+        if not self.crypto_available() or self._crypto_client is None:
+            return []
+        bars = self._crypto_client.get_historicals(symbol.upper(), interval=interval, span=span)
+        return [float(bar.close_price) for bar in bars]
+
+    def get_options_expirations(self, symbol: str) -> list[str]:
+        return self.client.get_options_expirations(symbol)
+
+    def get_options_chain(self, symbol: str, expiration: str):
+        return self.client.get_options_chain(symbol, expiration)
+
+    def get_closes(
+        self,
+        symbol: str,
+        *,
+        span: str = "month",
+        interval: str = "day",
+    ) -> list[float]:
+        if self.is_crypto_symbol(symbol):
+            crypto_span = "week" if span == "month" else span
+            crypto_interval = "hour" if interval == "day" else interval
+            return self.get_crypto_closes(symbol, span=crypto_span, interval=crypto_interval)
         bars = self.client.get_stock_historicals(symbol, interval=interval, span=span)
         return [float(bar.close_price) for bar in bars]
 
