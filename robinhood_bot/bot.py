@@ -10,6 +10,8 @@ from robinhood_bot.backtest import Backtester
 from robinhood_bot.client import RobinhoodService
 from robinhood_bot.config import AppConfig, load_config
 from robinhood_bot.execution import ExecutionEngine
+from robinhood_bot.messaging import TelegramBot, run_twilio_server
+from robinhood_bot.messaging.commands import handle_message
 from robinhood_bot.portfolio import TradeJournal
 from robinhood_bot.risk import RiskManager
 from robinhood_bot.scanner import (
@@ -307,6 +309,31 @@ def cmd_backtest(config: AppConfig, service: RobinhoodService, symbols: list[str
     return 0
 
 
+def _handler_context(bot: TradingBot, config: AppConfig, service: RobinhoodService, journal: TradeJournal) -> dict:
+    return {
+        "bot": bot,
+        "config": config,
+        "service": service,
+        "journal": journal,
+    }
+
+
+def cmd_telegram(bot: TradingBot, config: AppConfig, service: RobinhoodService, journal: TradeJournal) -> int:
+    telegram = TelegramBot(config.messaging, _handler_context(bot, config, service, journal))
+    telegram.poll_forever()
+    return 0
+
+
+def cmd_text(bot: TradingBot, config: AppConfig, service: RobinhoodService, journal: TradeJournal) -> int:
+    run_twilio_server(config.messaging, _handler_context(bot, config, service, journal))
+    return 0
+
+
+def cmd_reply(bot: TradingBot, config: AppConfig, service: RobinhoodService, journal: TradeJournal, message: str) -> int:
+    print(handle_message(message, **_handler_context(bot, config, service, journal)))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Robinhood trading bot")
     parser.add_argument(
@@ -324,6 +351,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("scan-all", help="Scan stocks, options, and crypto")
     subparsers.add_parser("once", help="Run one evaluation cycle")
     subparsers.add_parser("run", help="Run the bot loop continuously")
+    subparsers.add_parser("telegram", help="Message the bot via Telegram (easiest)")
+    subparsers.add_parser("text", help="Receive SMS via Twilio webhook server")
+
+    reply_parser = subparsers.add_parser("reply", help="Test a message command locally")
+    reply_parser.add_argument("message", help='e.g. "status" or "scan all"')
 
     backtest_parser = subparsers.add_parser("backtest", help="Backtest strategy on historical data")
     backtest_parser.add_argument(
@@ -377,6 +409,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run":
         bot.run_loop()
         return 0
+    if args.command == "telegram":
+        return cmd_telegram(bot, config, service, journal)
+    if args.command == "text":
+        return cmd_text(bot, config, service, journal)
+    if args.command == "reply":
+        return cmd_reply(bot, config, service, journal, args.message)
 
     parser.error(f"Unknown command: {args.command}")
     return 2

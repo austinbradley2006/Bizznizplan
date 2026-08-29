@@ -28,6 +28,38 @@ python run_bot.py once      # dry-run cycle
 
 For crypto: `pyhood setup crypto`
 
+## Text your bot
+
+The easiest way is **Telegram** (works like texting from your phone):
+
+1. Open Telegram and message **@BotFather**
+2. Send `/newbot`, follow prompts, copy the token
+3. Add to `.env`:
+   ```
+   TELEGRAM_BOT_TOKEN=your_token_here
+   ```
+4. Start the bot listener:
+   ```bash
+   python run_bot.py telegram
+   ```
+5. Find your bot in Telegram, send `/start` — it replies with your chat ID
+6. Text commands: `STATUS`, `SCAN`, `SCAN ALL`, `ONCE`, `JOURNAL`, `HELP`
+
+Test locally without Telegram:
+```bash
+python run_bot.py reply "status"
+```
+
+### Real SMS (Twilio)
+
+For actual text messages via phone number:
+
+1. Create a [Twilio](https://www.twilio.com) account and buy a number
+2. Set in `.env`: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`
+3. In `config.yaml`, enable `messaging.twilio` and add your phone to `allowed_numbers`
+4. Expose the server (e.g. `ngrok http 8080`) and set Twilio webhook to `https://YOUR_URL/sms`
+5. Run: `python run_bot.py text`
+
 ## Commands
 
 | Command | Description |
@@ -41,6 +73,9 @@ For crypto: `pyhood setup crypto`
 | `backtest SYMBOL...` | Historical strategy test |
 | `once` | Single trading cycle |
 | `run` | Continuous loop |
+| `telegram` | Listen for Telegram messages |
+| `text` | SMS webhook server (Twilio) |
+| `reply "..."` | Test a command locally |
 
 ## Architecture
 

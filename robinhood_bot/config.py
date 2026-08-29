@@ -114,6 +114,30 @@ class CryptoScannerConfig:
 
 
 @dataclass
+class TelegramConfig:
+    enabled: bool = True
+    bot_token: str = ""
+    allowed_chat_ids: list[int] = field(default_factory=list)
+
+
+@dataclass
+class TwilioConfig:
+    enabled: bool = False
+    account_sid: str = ""
+    auth_token: str = ""
+    phone_number: str = ""
+    allowed_numbers: list[str] = field(default_factory=list)
+    webhook_port: int = 8080
+    verify_signatures: bool = True
+
+
+@dataclass
+class MessagingConfig:
+    telegram: TelegramConfig = field(default_factory=TelegramConfig)
+    twilio: TwilioConfig = field(default_factory=TwilioConfig)
+
+
+@dataclass
 class AppConfig:
     bot: BotConfig = field(default_factory=BotConfig)
     trading: TradingConfig = field(default_factory=TradingConfig)
@@ -122,6 +146,7 @@ class AppConfig:
     scanner: ScannerConfig = field(default_factory=ScannerConfig)
     options_scanner: OptionsScannerConfig = field(default_factory=OptionsScannerConfig)
     crypto_scanner: CryptoScannerConfig = field(default_factory=CryptoScannerConfig)
+    messaging: MessagingConfig = field(default_factory=MessagingConfig)
 
     @property
     def can_place_orders(self) -> bool:
@@ -144,6 +169,9 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
     scanner_data = data.get("scanner", {})
     options_data = data.get("options_scanner", {})
     crypto_data = data.get("crypto_scanner", {})
+    messaging_data = data.get("messaging", {})
+    telegram_data = messaging_data.get("telegram", {})
+    twilio_data = messaging_data.get("twilio", {})
     weights_data = scanner_data.get("weights", {})
 
     bot = BotConfig(
@@ -235,6 +263,23 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         top_opportunities=int(crypto_data.get("top_opportunities", 10)),
     )
 
+    messaging = MessagingConfig(
+        telegram=TelegramConfig(
+            enabled=bool(telegram_data.get("enabled", True)),
+            bot_token=str(telegram_data.get("bot_token", "")),
+            allowed_chat_ids=[int(x) for x in telegram_data.get("allowed_chat_ids", [])],
+        ),
+        twilio=TwilioConfig(
+            enabled=bool(twilio_data.get("enabled", False)),
+            account_sid=str(twilio_data.get("account_sid", "")),
+            auth_token=str(twilio_data.get("auth_token", "")),
+            phone_number=str(twilio_data.get("phone_number", "")),
+            allowed_numbers=[str(n) for n in twilio_data.get("allowed_numbers", [])],
+            webhook_port=int(twilio_data.get("webhook_port", 8080)),
+            verify_signatures=bool(twilio_data.get("verify_signatures", True)),
+        ),
+    )
+
     return AppConfig(
         bot=bot,
         trading=trading,
@@ -243,4 +288,5 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         scanner=scanner,
         options_scanner=options_scanner,
         crypto_scanner=crypto_scanner,
+        messaging=messaging,
     )

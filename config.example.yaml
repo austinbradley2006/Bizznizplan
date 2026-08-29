@@ -78,3 +78,18 @@ crypto_scanner:
   span: week
   min_score: 0.5
   top_opportunities: 10
+
+messaging:
+  telegram:
+    enabled: true
+    # Or set TELEGRAM_BOT_TOKEN in .env (recommended)
+    bot_token: ""
+    # Leave empty to allow any chat on first /start (it shows your chat ID)
+    allowed_chat_ids: []
+  twilio:
+    enabled: false
+    # Or set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env
+    phone_number: "+1..."
+    allowed_numbers:
+      - "+1..."
+    webhook_port: 8080
