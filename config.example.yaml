@@ -32,7 +32,6 @@ scanner:
   symbol_source: scanner
   discovery_tags:
     - 100-most-popular
-    - 10-most-popular
     - top-movers
   include_movers: true
   include_watchlists: true
