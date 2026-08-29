@@ -7,9 +7,11 @@ A configurable Python bot that connects to your Robinhood account and runs autom
 ## Features
 
 - Connect to Robinhood with persistent session (no password in code)
+- **Market scanner** — discovers opportunities across Robinhood popular lists, movers, and your watchlists
+- **Opportunity scoring** — ranks symbols by momentum, volume, valuation, analyst ratings, and strategy signals
 - **Dry-run mode on by default** — logs signals without placing orders
 - Pluggable strategies (includes SMA crossover example)
-- CLI: `status`, `once` (single cycle), `run` (continuous loop)
+- CLI: `status`, `scan`, `once`, `run`
 - Configurable symbols, trade size, and poll interval
 
 ## Quick start
@@ -44,13 +46,21 @@ Edit `config.yaml` — start with defaults (`dry_run: true`, `live_trading_enabl
 python run_bot.py status
 ```
 
-### 5. Run a test cycle (no real trades)
+### 5. Scan the market for opportunities
+
+```bash
+python run_bot.py scan
+```
+
+This pulls candidates from Robinhood discovery surfaces (popular lists, top movers, S&P movers, your watchlists), screens them, and ranks the best trade setups.
+
+### 6. Run a test cycle (no real trades)
 
 ```bash
 python run_bot.py once
 ```
 
-### 6. Run continuously (still dry-run unless you opt in)
+### 7. Run continuously (still dry-run unless you opt in)
 
 ```bash
 python run_bot.py run
@@ -75,10 +85,26 @@ The bot will refuse to place real orders unless **both** flags are set correctly
 | `trading.symbols` | Tickers to watch |
 | `trading.trade_amount_usd` | Dollar amount per buy signal |
 | `trading.max_positions` | Max simultaneous positions |
+| `scanner.enabled` | Turn market scanning on/off |
+| `scanner.symbol_source` | `scanner` (auto-discover) or `static` (manual list) |
+| `scanner.discovery_tags` | Robinhood lists to scan (`100-most-popular`, `top-movers`, etc.) |
+| `scanner.include_movers` | Include S&P 500 top movers |
+| `scanner.include_watchlists` | Include your Robinhood watchlists |
+| `scanner.min_score` | Minimum opportunity score (0–1) |
+| `scanner.top_opportunities` | How many ranked setups to surface per scan |
 | `strategy.name` | Strategy to use (`sma_crossover`) |
 | `strategy.params` | Strategy-specific parameters |
 
 Environment overrides: `BOT_DRY_RUN`, `BOT_LIVE_TRADING_ENABLED`
+
+## How scanning works
+
+1. **Discover** — Collect symbols from Robinhood tags, movers, and watchlists
+2. **Screen** — Batch-fetch quotes and fundamentals; filter by price, volume, and market cap
+3. **Score** — Rank by momentum, relative volume, 52-week range position, valuation, analyst ratings, and your strategy
+4. **Trade** — In `scanner` mode, the bot acts on the top buy/sell candidates (respecting `max_positions`)
+
+The scanner does not brute-force all ~5,000 Robinhood stocks each cycle (that would be slow and rate-limited). It focuses on what Robinhood surfaces as popular and moving, then deep-evaluates the best candidates.
 
 ## Strategies
 
@@ -104,6 +130,8 @@ robinhood_bot/
   bot.py              # CLI and main loop
   client.py           # Robinhood connection wrapper
   config.py           # YAML + env config loader
+  scanner/
+    market_scanner.py # Cross-app opportunity discovery and scoring
   strategies/
     base.py           # Strategy interface
     sma_crossover.py  # Example strategy

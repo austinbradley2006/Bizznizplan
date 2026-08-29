@@ -1,26 +1,46 @@
 # Copy to config.yaml and edit before running the bot.
 
 bot:
-  # How often to evaluate the strategy (seconds).
   poll_interval_seconds: 300
-  # When true, the bot logs signals but never places orders.
   dry_run: true
-  # Must be explicitly set to true to allow live orders (dry_run must be false).
   live_trading_enabled: false
 
 trading:
+  # Used when scanner.symbol_source is "static"
   symbols:
     - AAPL
     - MSFT
-  # Dollars to allocate per buy signal (fractional shares supported).
   trade_amount_usd: 50
-  # Optional: cap total open positions across all symbols.
   max_positions: 5
+
+scanner:
+  enabled: true
+  # scanner = discover opportunities across Robinhood lists/movers/watchlists
+  # static = only trade the symbols listed above
+  symbol_source: scanner
+  discovery_tags:
+    - 100-most-popular
+    - 10-most-popular
+    - top-movers
+  include_movers: true
+  include_watchlists: true
+  min_price_usd: 5
+  min_avg_volume: 100000
+  min_market_cap_usd: 500000000
+  max_candidates: 300
+  deep_scan_limit: 60
+  top_opportunities: 10
+  min_score: 0.55
+  weights:
+    momentum: 0.25
+    volume: 0.2
+    range_position: 0.15
+    value: 0.1
+    analyst: 0.2
 
 strategy:
   name: sma_crossover
   params:
     fast_period: 10
     slow_period: 30
-    # Minimum bars required before generating signals.
     min_bars: 35

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import pyhood
 from pyhood.client import PyhoodClient
 from pyhood.exceptions import AuthError, DeviceApprovalRequiredError, TokenExpiredError
+from pyhood.models import Mover, Watchlist
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,28 @@ class RobinhoodService:
     def get_price(self, symbol: str) -> float:
         quote = self.client.get_quote(symbol)
         return float(quote.price)
+
+    def get_quotes_batch(self, symbols: list[str]) -> dict:
+        if not symbols:
+            return {}
+        return self.client.get_quotes(symbols)
+
+    def get_fundamentals_batch(self, symbols: list[str]) -> dict[str, dict]:
+        if not symbols:
+            return {}
+        return self.client.get_fundamentals_batch(symbols)
+
+    def get_tag_symbols(self, tag: str) -> list[str]:
+        return self.client.get_tags(tag)
+
+    def get_movers(self, direction: str = "up") -> list[Mover]:
+        return self.client.get_movers(direction)
+
+    def get_watchlists(self) -> list[Watchlist]:
+        return self.client.get_watchlists()
+
+    def get_ratings(self, symbol: str):
+        return self.client.get_ratings(symbol)
 
     def get_closes(self, symbol: str, *, span: str = "month", interval: str = "day") -> list[float]:
         bars = self.client.get_stock_historicals(symbol, interval=interval, span=span)
