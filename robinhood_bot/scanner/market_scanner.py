@@ -39,8 +39,8 @@ class MarketScanner:
                 symbols = self.service.get_tag_symbols(tag)
                 symbol_sources[f"tag:{tag}"] = symbols
                 logger.info("Tag %s returned %s symbols", tag, len(symbols))
-            except Exception:
-                logger.exception("Failed to load tag %s", tag)
+            except Exception as exc:
+                logger.warning("Skipped tag %s (unavailable: %s)", tag, exc)
 
         if self.config.include_movers:
             for direction in ("up", "down"):
@@ -49,8 +49,8 @@ class MarketScanner:
                     symbols = [mover.symbol for mover in movers if mover.symbol]
                     symbol_sources[f"movers:{direction}"] = symbols
                     logger.info("Movers %s returned %s symbols", direction, len(symbols))
-                except Exception:
-                    logger.exception("Failed to load movers:%s", direction)
+                except Exception as exc:
+                    logger.warning("Skipped movers:%s (unavailable: %s)", direction, exc)
 
         if self.config.include_watchlists:
             try:
@@ -62,8 +62,8 @@ class MarketScanner:
                             watchlist.name,
                             len(watchlist.symbols),
                         )
-            except Exception:
-                logger.exception("Failed to load watchlists")
+            except Exception as exc:
+                logger.warning("Skipped watchlists (unavailable: %s)", exc)
 
         return symbol_sources
 

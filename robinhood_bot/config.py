@@ -67,7 +67,6 @@ class ScannerConfig:
     discovery_tags: list[str] = field(
         default_factory=lambda: [
             "100-most-popular",
-            "10-most-popular",
             "top-movers",
         ]
     )
@@ -215,7 +214,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         discovery_tags=[
             str(tag) for tag in scanner_data.get(
                 "discovery_tags",
-                ["100-most-popular", "10-most-popular", "top-movers"],
+                ["100-most-popular", "top-movers"],
             )
         ],
         include_movers=bool(scanner_data.get("include_movers", True)),

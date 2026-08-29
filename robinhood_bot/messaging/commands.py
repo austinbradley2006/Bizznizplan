@@ -14,8 +14,12 @@ logger = logging.getLogger(__name__)
 HELP_TEXT = """Robinhood Bot commands:
 
 STATUS - account & positions
+POSITIONS - open positions & P&L
 SCAN - top stock picks
+SCAN OPTIONS - option chain picks
+SCAN CRYPTO - crypto pair picks
 SCAN ALL - stocks, options, crypto
+BACKTEST AAPL MSFT - test strategy on past data
 ONCE - run one trading cycle
 JOURNAL - recent trades
 HELP - this message
@@ -44,9 +48,19 @@ def handle_message(
     if command == "SCAN":
         return _format_scan(bot.scan_market(), limit=5)
 
+    if command in {"SCAN OPTIONS", "SCANOPTIONS", "SCAN-OPTIONS", "OPTIONS"}:
+        return _format_scan(bot.scan_options(), limit=5)
+
+    if command in {"SCAN CRYPTO", "SCANCRYPTO", "SCAN-CRYPTO", "CRYPTO"}:
+        return _format_scan(bot.scan_crypto(), limit=5)
+
     if command in {"SCAN ALL", "SCANALL", "SCAN-ALL"}:
         parts = [_format_scan(result, limit=3) for result in bot.scan_all()]
         return "\n\n".join(parts)
+
+    if command.startswith("BACKTEST"):
+        symbols = [token.upper() for token in text.strip().split()[1:]]
+        return _format_backtest(bot, symbols or ["AAPL", "MSFT", "NVDA"])
 
     if command == "ONCE":
         try:
@@ -100,6 +114,29 @@ def _format_scan(result, *, limit: int) -> str:
         label = opportunity.display_symbol
         lines.append(
             f"  {label} {opportunity.signal} score={opportunity.score:.2f} ${opportunity.price:,.2f}"
+        )
+    return "\n".join(lines)
+
+
+def _format_backtest(bot: "TradingBot", symbols: list[str]) -> str:
+    from robinhood_bot.backtest import Backtester
+
+    backtester = Backtester(bot.strategy)
+    lines = ["Backtest (1y daily):"]
+    for symbol in symbols[:5]:
+        try:
+            closes = bot.service.get_closes(symbol, span="year", interval="day")
+        except Exception:
+            lines.append(f"  {symbol}: data unavailable")
+            continue
+        if len(closes) < 40:
+            lines.append(f"  {symbol}: insufficient history ({len(closes)} bars)")
+            continue
+        result = backtester.run_on_closes(symbol, closes)
+        win_rate = (result.wins / result.trades * 100) if result.trades else 0
+        lines.append(
+            f"  {symbol}: {result.total_return_pct:+.1f}% | "
+            f"{result.trades} trades | win {win_rate:.0f}%"
         )
     return "\n".join(lines)
 
