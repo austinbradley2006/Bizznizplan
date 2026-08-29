@@ -1,0 +1,3 @@
+pyhood>=0.12.1
+pyyaml>=6.0
+python-dotenv>=1.0

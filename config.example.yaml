@@ -1,0 +1,26 @@
+# Copy to config.yaml and edit before running the bot.
+
+bot:
+  # How often to evaluate the strategy (seconds).
+  poll_interval_seconds: 300
+  # When true, the bot logs signals but never places orders.
+  dry_run: true
+  # Must be explicitly set to true to allow live orders (dry_run must be false).
+  live_trading_enabled: false
+
+trading:
+  symbols:
+    - AAPL
+    - MSFT
+  # Dollars to allocate per buy signal (fractional shares supported).
+  trade_amount_usd: 50
+  # Optional: cap total open positions across all symbols.
+  max_positions: 5
+
+strategy:
+  name: sma_crossover
+  params:
+    fast_period: 10
+    slow_period: 30
+    # Minimum bars required before generating signals.
+    min_bars: 35
