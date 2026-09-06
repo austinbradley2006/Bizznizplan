@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NQ Pine backtest</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="ticker">NQ</span>
+        <span class="sub" id="symbolMeta">E-mini Nasdaq-100</span>
+      </div>
+      <label class="ctl">
+        Interval
+        <select id="interval">
+          <option value="1d" selected>1D · 365 days</option>
+          <option value="1h">1H · 365 days</option>
+          <option value="15m">15m · 60 days</option>
+        </select>
+      </label>
+      <label class="ctl">
+        Contract
+        <select id="contract">
+          <option value="NQ" selected>NQ · $20/pt</option>
+          <option value="MNQ">MNQ · $2/pt</option>
+        </select>
+      </label>
+      <label class="ctl">
+        Example
+        <select id="examples">
+          <option value="sma">SMA crossover</option>
+          <option value="ema">EMA + ATR trend</option>
+          <option value="donchian">Donchian breakout</option>
+          <option value="rsi">RSI flip</option>
+        </select>
+      </label>
+      <button id="run" type="button">Run script</button>
+      <div id="status" class="status">Loading NQ…</div>
+    </header>
+
+    <main>
+      <section class="chart-col">
+        <div id="chart" class="chart"></div>
+        <div class="equity-wrap">
+          <div class="equity-label">Equity</div>
+          <div id="equity" class="equity"></div>
+        </div>
+      </section>
+      <aside class="editor-col">
+        <div class="editor-head">
+          <span>Pine script</span>
+          <span class="hint">Ctrl/⌘ + Enter to run</span>
+        </div>
+        <div id="inputs" class="inputs"></div>
+        <textarea id="pine" spellcheck="false"></textarea>
+        <p class="subset">
+          Pine v5 subset: <code>ta.sma/ema/rsi/atr/highest/lowest/crossover/crossunder</code>,
+          <code>strategy.entry/close/exit</code>, <code>plot</code>, <code>input.*</code>,
+          <code>and/or/not</code>, <code>close[1]</code>. Orders fill at the next bar open.
+          NQ data is Yahoo <code>NQ=F</code> (front-month, not back-adjusted).
+        </p>
+      </aside>
+    </main>
+
+    <footer class="tester">
+      <div class="tester-head">
+        <strong>Strategy tester</strong>
+        <span id="openPos">Flat</span>
+      </div>
+      <div id="metrics" class="metrics"></div>
+      <div class="trades-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Side</th>
+              <th>In</th>
+              <th>Out</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>Pts</th>
+              <th>P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody id="tradesBody"></tbody>
+        </table>
+      </div>
+    </footer>
+
+    <script src="vendor/lightweight-charts.standalone.production.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/pine.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
