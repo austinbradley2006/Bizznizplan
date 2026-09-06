@@ -320,6 +320,15 @@ function paintResult(out) {
   state.equityChart.timeScale().fitContent();
 
   const up = r.netProfit >= 0;
+  $("testerSummary").textContent =
+    usd(r.netProfit, 0) +
+    "  ·  " +
+    r.trades +
+    " trades  ·  " +
+    fmtNum(r.winRate, 1) +
+    "% win  ·  PF " +
+    fmtNum(r.profitFactor, 2);
+  $("testerSummary").className = up ? "up" : "down";
   $("metrics").innerHTML = [
     metric("Net profit", usd(r.netProfit, 0), up),
     metric("Return", fmtNum(r.netProfitPct, 1) + "%", up),

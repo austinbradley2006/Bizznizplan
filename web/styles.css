@@ -216,16 +216,32 @@ main {
 .tester {
   border-top: 1px solid var(--line);
   background: #0f1318;
-  max-height: 280px;
+  height: 250px;
   display: grid;
   grid-template-rows: auto auto 1fr;
+  min-height: 0;
 }
 
 .tester-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   padding: 8px 14px 0;
   font-size: 13px;
+}
+
+#testerSummary {
+  margin-right: auto;
+  font-weight: 700;
+}
+
+#testerSummary.up {
+  color: var(--up);
+}
+
+#testerSummary.down {
+  color: var(--down);
 }
 
 #openPos {
@@ -238,6 +254,7 @@ main {
   gap: 18px;
   padding: 8px 14px 10px;
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .metric .mlabel {
