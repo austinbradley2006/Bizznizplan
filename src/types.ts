@@ -9,6 +9,16 @@ export type Emotion =
   | 'confident'
   | 'bored'
 
+export type TradeSource =
+  | 'manual'
+  | 'tradingview'
+  | 'robinhood'
+  | 'ibkr'
+  | 'tradovate'
+  | 'thinkorswim'
+  | 'generic'
+  | 'webhook'
+
 export interface Trade {
   id: string
   date: string // yyyy-MM-dd
@@ -22,6 +32,8 @@ export interface Trade {
   setup: string
   notes: string
   createdAt: string
+  source?: TradeSource
+  externalId?: string
 }
 
 export interface DayReflection {
@@ -33,4 +45,11 @@ export interface DayReflection {
 export interface JournalState {
   trades: Trade[]
   reflections: DayReflection[]
+}
+
+export interface ImportResult {
+  added: Trade[]
+  skipped: number
+  errors: string[]
+  source: TradeSource
 }

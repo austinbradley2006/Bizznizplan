@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { addMonths, format, subMonths } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { DayReflection, Emotion, Side, Trade } from './types'
+import { ConnectionsModal } from './components/ConnectionsModal'
 import { loadJournal, resetJournal, saveJournal } from './lib/storage'
 import {
   computeStats,
@@ -59,6 +60,7 @@ export default function App() {
   const [month, setMonth] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState(todayKey())
   const [formOpen, setFormOpen] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [reflectionText, setReflectionText] = useState('')
@@ -135,10 +137,17 @@ export default function App() {
       setup: draft.setup.trim(),
       notes: draft.notes.trim(),
       createdAt: new Date().toISOString(),
+      source: 'manual',
     }
 
     setTrades((prev) =>
-      editingId ? prev.map((t) => (t.id === editingId ? { ...next, createdAt: t.createdAt } : t)) : [next, ...prev],
+      editingId
+        ? prev.map((t) =>
+            t.id === editingId
+              ? { ...next, createdAt: t.createdAt, source: t.source ?? 'manual', externalId: t.externalId }
+              : t,
+          )
+        : [next, ...prev],
     )
     setSelectedDay(next.date)
     setFormOpen(false)
@@ -154,6 +163,16 @@ export default function App() {
       const others = prev.filter((r) => r.date !== selectedDay)
       return [...others, { date: selectedDay, mood, text: reflectionText.trim() }]
     })
+  }
+
+  function handleImport(incoming: Trade[]) {
+    if (!incoming.length) return
+    setTrades((prev) => [...incoming, ...prev])
+    const newest = sortTrades(incoming)[0]
+    if (newest) {
+      setSelectedDay(newest.date)
+      setMonth(new Date(`${newest.date}T12:00:00`))
+    }
   }
 
   function handleReset() {
@@ -206,6 +225,13 @@ export default function App() {
               className="rounded-full border border-line px-4 py-2 text-sm text-ink/55 transition hover:border-ink/25 hover:text-ink"
             >
               Reset demo
+            </button>
+            <button
+              type="button"
+              onClick={() => setConnectOpen(true)}
+              className="rounded-full border border-line bg-white/70 px-4 py-2 text-sm font-medium text-ink/80 transition hover:border-ink/25 hover:text-ink"
+            >
+              Connect
             </button>
             <button
               type="button"
@@ -457,6 +483,16 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {connectOpen && (
+          <ConnectionsModal
+            trades={trades}
+            onClose={() => setConnectOpen(false)}
+            onImport={handleImport}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -541,6 +577,11 @@ function TradeRows({
             <div className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink/55">
               {emotionLabel(t.emotion)}
             </div>
+            {t.source && t.source !== 'manual' && (
+              <div className="rounded-full bg-sky/25 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sky-deep uppercase">
+                {t.source === 'tradingview' || t.source === 'webhook' ? 'TV' : t.source}
+              </div>
+            )}
           </button>
           <div className={`ml-auto font-semibold ${t.pnl >= 0 ? 'tone-up' : 'tone-down'}`}>
             {formatMoney(t.pnl)}

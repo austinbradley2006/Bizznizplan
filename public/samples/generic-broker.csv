@@ -1,0 +1,4 @@
+Date,Symbol,Side,Entry,Exit,Size,P&L,Setup
+2026-09-05,ES,long,5720,5740,2,2000,Trend hold
+2026-09-05,NQ,short,21480,21510,1,-600,Failed fade
+2026-09-06,CL,short,78.2,77.8,2,800,Inventory fade
