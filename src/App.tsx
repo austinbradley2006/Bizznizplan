@@ -85,14 +85,15 @@ export default function App() {
 
   const monthTrades = useMemo(() => tradesInMonth(trades, month), [trades, month])
   const stats = useMemo(() => computeStats(monthTrades), [monthTrades])
-  const dayMap = useMemo(() => dailyPnlMap(monthTrades), [monthTrades])
+  const monthDayMap = useMemo(() => dailyPnlMap(monthTrades), [monthTrades])
+  const allDayMap = useMemo(() => dailyPnlMap(trades), [trades])
   const grid = useMemo(() => monthGrid(month), [month])
   const dayTrades = useMemo(
     () => sortTrades(trades.filter((t) => t.date === selectedDay)),
     [trades, selectedDay],
   )
   const allSorted = useMemo(() => sortTrades(trades).slice(0, 8), [trades])
-  const dayPnl = dayMap[selectedDay] ?? 0
+  const dayPnl = allDayMap[selectedDay] ?? 0
 
   function openNew(date = selectedDay) {
     setEditingId(null)
@@ -151,7 +152,6 @@ export default function App() {
   function saveReflection() {
     setReflections((prev) => {
       const others = prev.filter((r) => r.date !== selectedDay)
-      if (!reflectionText.trim()) return others
       return [...others, { date: selectedDay, mood, text: reflectionText.trim() }]
     })
   }
@@ -286,7 +286,7 @@ export default function App() {
                 ))}
                 {grid.days.map((day) => {
                   const key = format(day, 'yyyy-MM-dd')
-                  const pnl = dayMap[key]
+                  const pnl = monthDayMap[key]
                   const selected = key === selectedDay
                   const tone = pnl === undefined ? 'empty' : pnlTone(pnl)
                   return (
