@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0b1220;
+  --color-ink-soft: #1a2438;
+  --color-mist: #e8f1f8;
+  --color-cloud: #f4f8fb;
+  --color-sky: #9ec4e0;
+  --color-sky-deep: #3d6f94;
+  --color-profit: #1fa97a;
+  --color-profit-soft: #d8f3e8;
+  --color-loss: #c45c4a;
+  --color-loss-soft: #f8e4e0;
+  --color-copper: #b87333;
+  --color-line: rgb(11 18 32 / 0.1);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background:
+      radial-gradient(1200px 600px at 12% -10%, rgb(158 196 224 / 0.55), transparent 55%),
+      radial-gradient(900px 500px at 92% 8%, rgb(31 169 122 / 0.14), transparent 50%),
+      radial-gradient(800px 480px at 70% 110%, rgb(196 92 74 / 0.1), transparent 45%),
+      linear-gradient(180deg, #f7fafc 0%, var(--color-cloud) 45%, #eef4f8 100%);
+    background-attachment: fixed;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background: rgb(31 169 122 / 0.25);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .tone-up {
+    color: var(--color-profit);
+  }
+
+  .tone-down {
+    color: var(--color-loss);
+  }
+
+  .tone-flat {
+    color: rgb(11 18 32 / 0.45);
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  }
+}
